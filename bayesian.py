@@ -2,11 +2,19 @@ from __future__ import annotations
 import argparse
 from utils import read_sms, split_observations_and_labels
 from random import Random
+import re
 
 
 def tokenize_sms(message):
-    """YOUR CODE HERE"""
-    raise NotImplementedError("TODO")
+    """
+    Convierte un mensaje SMS en una lista de tokens:
+    - pasa a minúsculas
+    - elimina puntuación
+    - separa en palabras alfanuméricas
+    """
+    message = message.lower()
+    tokens = re.findall(r"[a-z0-9']+", message)
+    return tokens
 
 
 class MultinomialNaiveBayesClassifier:
