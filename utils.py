@@ -13,7 +13,6 @@ def read_csv(file_name, ignore_first=False):
     return table
 
 
-
 def split_observations_and_labels(table):
     data, labels = [], []
     for row in table:
