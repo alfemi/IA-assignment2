@@ -3,7 +3,8 @@ import argparse
 from utils import read_sms, split_observations_and_labels
 from random import Random
 import re
-
+import math
+from collections import Counter
 
 def tokenize_sms(message):
     """
@@ -20,10 +21,63 @@ def tokenize_sms(message):
 class MultinomialNaiveBayesClassifier:
     def __init__(self, assumed_probability=1):
         self.assumed_probability = assumed_probability
+def fit(self, observations, labels):
+    # Get the set of possible classes (e.g. ham, spam)
+    self.classes_ = sorted(set(labels))
 
-    def fit(self, observations, labels):
-        """YOUR CODE HERE"""
-        return self
+    # Count how many documents belong to each class
+    self.doc_count_ = Counter(labels)
+
+    # Total number of training documents
+    self.total_docs_ = len(labels)
+
+    # Initialize vocabulary and word counters per class
+    self.vocabulary_ = set()
+    self.word_count_ = {c: Counter() for c in self.classes_}
+
+    # Count word occurrences for each class
+    for tokens, c in zip(observations, labels):
+        for t in tokens:
+            self.vocabulary_.add(t)
+            self.word_count_[c][t] += 1
+
+    # Compute log prior probabilities log(P(c))
+    self.class_log_prior_ = {}
+    for c in self.classes_:
+        self.class_log_prior_[c] = math.log(
+            self.doc_count_[c] / self.total_docs_
+        )
+
+    # Additive smoothing parameter
+    alpha = float(self.assumed_probability)
+
+    # Vocabulary size
+    V = len(self.vocabulary_)
+
+    # Initialize structures for likelihoods
+    self.feature_log_prob_ = {}
+    self.unknown_log_prob_ = {}
+
+    # For each class, compute token probabilities P(w|c)
+    for c in self.classes_:
+        self.feature_log_prob_[c] = {}
+
+        # Total number of tokens in this class
+        total_words_c = sum(self.word_count_[c].values())
+
+        # Common denominator for all tokens of this class
+        denom = total_words_c + alpha * V
+
+        # Compute log-probability for each token in the vocabulary
+        for w in self.vocabulary_:
+            num = self.word_count_[c][w] + alpha
+            self.feature_log_prob_[c][w] = math.log(num / denom)
+
+        # Log-probability for unseen tokens (out-of-vocabulary)
+        self.unknown_log_prob_[c] = math.log(alpha / denom)
+
+    return self
+
 
     def predict(self, observations):
         """YOUR CODE HERE"""
