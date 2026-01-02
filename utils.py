@@ -1,16 +1,17 @@
-def read_csv(file_name):
+def read_csv(file_name, ignore_first=False):
     table = []
     with open(file_name) as f:
         for i, line in enumerate(f):
-            line = line.strip()
-            if i == 0:
+            if i == 0 and ignore_first:
                 continue
+            line = line.strip()
             parsed = []
             for entry in line.split(","):
                 entry = _cast_to(entry)
                 parsed.append(entry)
             table.append(parsed)
     return table
+
 
 
 def split_observations_and_labels(table):
