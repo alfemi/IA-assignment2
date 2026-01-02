@@ -49,7 +49,8 @@ class MultinomialNaiveBayesClassifier:
                 self.doc_count_[c] / self.total_docs_
             )
 
-        # Additive smoothing parameter
+        # Use assumed_probability as additive smoothing (Laplace smoothing)
+        # to avoid zero probabilities for unseen tokens
         alpha = float(self.assumed_probability)
 
         # Vocabulary size
@@ -81,36 +82,35 @@ class MultinomialNaiveBayesClassifier:
 
 
     def predict(self, observations):
-        def predict(self, observations):
-            predictions = []
+        predictions = []
 
-            # For each tokenized message
-            for tokens in observations:
-                token_counts = Counter(tokens)  # how many times each token appears in this message
+        # For each tokenized message
+        for tokens in observations:
+            token_counts = Counter(tokens)  # how many times each token appears in this message
 
-                best_class = None
-                best_score = -float("inf")
+            best_class = None
+            best_score = -float("inf")
 
-                # Compute a score for each class
-                for c in self.classes_:
-                    score = self.class_log_prior_[c]  # start with log P(c)
+            # Compute a score for each class
+            for c in self.classes_:
+                score = self.class_log_prior_[c]  # start with log P(c)
 
-                    # Add log-likelihoods for each token in the message
-                    for t, k in token_counts.items():
-                        if t in self.vocabulary_:
-                            score += k * self.feature_log_prob_[c][t]
-                        else:
-                            # unseen token -> use the smoothed unknown probability
-                            score += k * self.unknown_log_prob_[c]
+                # Add log-likelihoods for each token in the message
+                for t, k in token_counts.items():
+                    if t in self.vocabulary_:
+                        score += k * self.feature_log_prob_[c][t]
+                    else:
+                        # unseen token -> use the smoothed unknown probability
+                        score += k * self.unknown_log_prob_[c]
 
-                    # Keep the best scoring class
-                    if score > best_score:
-                        best_score = score
-                        best_class = c
+                # Keep the best scoring class
+                if score > best_score:
+                    best_score = score
+                    best_class = c
 
-                predictions.append(best_class)
+            predictions.append(best_class)
 
-            return predictions
+        return predictions
 
     def score(self, data, labels) -> float:
         predicted = self.predict(data)
