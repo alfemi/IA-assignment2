@@ -21,67 +21,96 @@ def tokenize_sms(message):
 class MultinomialNaiveBayesClassifier:
     def __init__(self, assumed_probability=1):
         self.assumed_probability = assumed_probability
-def fit(self, observations, labels):
-    # Get the set of possible classes (e.g. ham, spam)
-    self.classes_ = sorted(set(labels))
 
-    # Count how many documents belong to each class
-    self.doc_count_ = Counter(labels)
+    def fit(self, observations, labels):
+        # Get the set of possible classes (e.g. ham, spam)
+        self.classes_ = sorted(set(labels))
 
-    # Total number of training documents
-    self.total_docs_ = len(labels)
+        # Count how many documents belong to each class
+        self.doc_count_ = Counter(labels)
 
-    # Initialize vocabulary and word counters per class
-    self.vocabulary_ = set()
-    self.word_count_ = {c: Counter() for c in self.classes_}
+        # Total number of training documents
+        self.total_docs_ = len(labels)
 
-    # Count word occurrences for each class
-    for tokens, c in zip(observations, labels):
-        for t in tokens:
-            self.vocabulary_.add(t)
-            self.word_count_[c][t] += 1
+        # Initialize vocabulary and word counters per class
+        self.vocabulary_ = set()
+        self.word_count_ = {c: Counter() for c in self.classes_}
 
-    # Compute log prior probabilities log(P(c))
-    self.class_log_prior_ = {}
-    for c in self.classes_:
-        self.class_log_prior_[c] = math.log(
-            self.doc_count_[c] / self.total_docs_
-        )
+        # Count word occurrences for each class
+        for tokens, c in zip(observations, labels):
+            for t in tokens:
+                self.vocabulary_.add(t)
+                self.word_count_[c][t] += 1
 
-    # Additive smoothing parameter
-    alpha = float(self.assumed_probability)
+        # Compute log prior probabilities log(P(c))
+        self.class_log_prior_ = {}
+        for c in self.classes_:
+            self.class_log_prior_[c] = math.log(
+                self.doc_count_[c] / self.total_docs_
+            )
 
-    # Vocabulary size
-    V = len(self.vocabulary_)
+        # Additive smoothing parameter
+        alpha = float(self.assumed_probability)
 
-    # Initialize structures for likelihoods
-    self.feature_log_prob_ = {}
-    self.unknown_log_prob_ = {}
+        # Vocabulary size
+        V = len(self.vocabulary_)
 
-    # For each class, compute token probabilities P(w|c)
-    for c in self.classes_:
-        self.feature_log_prob_[c] = {}
+        # Initialize structures for likelihoods
+        self.feature_log_prob_ = {}
+        self.unknown_log_prob_ = {}
 
-        # Total number of tokens in this class
-        total_words_c = sum(self.word_count_[c].values())
+        # For each class, compute token probabilities P(w|c)
+        for c in self.classes_:
+            self.feature_log_prob_[c] = {}
 
-        # Common denominator for all tokens of this class
-        denom = total_words_c + alpha * V
+            # Total number of tokens in this class
+            total_words_c = sum(self.word_count_[c].values())
 
-        # Compute log-probability for each token in the vocabulary
-        for w in self.vocabulary_:
-            num = self.word_count_[c][w] + alpha
-            self.feature_log_prob_[c][w] = math.log(num / denom)
+            # Common denominator for all tokens of this class
+            denom = total_words_c + alpha * V
 
-        # Log-probability for unseen tokens (out-of-vocabulary)
-        self.unknown_log_prob_[c] = math.log(alpha / denom)
+            # Compute log-probability for each token in the vocabulary
+            for w in self.vocabulary_:
+                num = self.word_count_[c][w] + alpha
+                self.feature_log_prob_[c][w] = math.log(num / denom)
 
-    return self
+            # Log-probability for unseen tokens (out-of-vocabulary)
+            self.unknown_log_prob_[c] = math.log(alpha / denom)
+
+        return self
 
 
     def predict(self, observations):
-        """YOUR CODE HERE"""
-        raise NotImplementedError("TODO")
+        def predict(self, observations):
+            predictions = []
+
+            # For each tokenized message
+            for tokens in observations:
+                token_counts = Counter(tokens)  # how many times each token appears in this message
+
+                best_class = None
+                best_score = -float("inf")
+
+                # Compute a score for each class
+                for c in self.classes_:
+                    score = self.class_log_prior_[c]  # start with log P(c)
+
+                    # Add log-likelihoods for each token in the message
+                    for t, k in token_counts.items():
+                        if t in self.vocabulary_:
+                            score += k * self.feature_log_prob_[c][t]
+                        else:
+                            # unseen token -> use the smoothed unknown probability
+                            score += k * self.unknown_log_prob_[c]
+
+                    # Keep the best scoring class
+                    if score > best_score:
+                        best_score = score
+                        best_class = c
+
+                predictions.append(best_class)
+
+            return predictions
 
     def score(self, data, labels) -> float:
         predicted = self.predict(data)
