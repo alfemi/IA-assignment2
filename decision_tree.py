@@ -136,8 +136,69 @@ class DecisionTreeClassifier:
             stack.append((node.false_branch, obs2, labs2))
 
     def _prune_tree(self):
-        """YOUR CODE HERE"""
-        raise NotImplementedError("TODO")
+        # if threshold is <= 0, no pruning
+        if self.prune_threshold <= 0 or self.tree_ is None:
+            return
+        
+        def counts_to_labels(counts_dict):
+            labels = []
+            for lab, cnt in counts_dict.items():
+                labels.extend([lab] * cnt)
+            return labels
+        
+        # (node, visited)
+        stack = [(self.tree_, False)]
+
+        while stack:
+            node, visited = stack.pop()
+
+            if node is None or node.is_leaf():
+                continue
+            
+            if not visited:
+                # process children first, then the node
+                stack.append((node, True))
+                stack.append((node.true_branch, False))
+                stack.append((node.false_branch, False))
+                continue
+            
+            # going "up", if both children are leaves, try to prune
+            if node.true_branch is None or node.false_branch is None:
+                continue
+            
+            if node.true_branch.is_leaf() and node.false_branch.is_leaf():
+                left_counts = node.true_branch.results
+                right_counts = node.false_branch.results
+
+                left_labels = counts_to_labels(left_counts)
+                right_labels = counts_to_labels(right_counts)
+
+                n_left = len(left_labels)
+                n_right = len(right_labels)
+                n_total = n_left + n_right
+
+                if n_total == 0:
+                    continue
+                
+                # impurity if we merge
+                merged_labels = left_labels + right_labels
+                imp_merged = self.scoref(merged_labels)
+
+                # impurity if we keep the split
+                imp_children = (n_left / n_total) * self.scoref(left_labels) + (n_right / n_total) * self.scoref(right_labels)
+
+                # improvement of keeping the split vs merging
+                improvement = imp_merged - imp_children
+
+                # if the improvement is small, prune
+                if improvement < self.prune_threshold:
+                    node.column = None
+                    node.value = None
+                    node.results = _unique_counts(merged_labels)
+                    node.true_branch = None
+                    node.false_branch = None
+
+
 
 
 @dataclass
