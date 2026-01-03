@@ -5,6 +5,7 @@ from typing import Optional
 import argparse
 from utils import read_csv, split_observations_and_labels
 from random import Random
+import itertools
 
 
 def gini(labels) -> float:
@@ -95,7 +96,16 @@ class DecisionTreeClassifier:
 
             # try all available questions (col, value)
             for col in range(ncols):
-                for value in _unique_values(obs, col):
+                col_values = _unique_values(obs, col)
+
+                # numeric column: try thresholds
+                # categorical column: try all subsets
+                if col_values and all(_is_numeric(v) for v in col_values):
+                    candidate_values = col_values
+                else:
+                    candidate_values = _all_nontrivial_subsets(col_values)
+
+                for value in candidate_values:
                     obs1, labs1, obs2, labs2 = _divideset(obs, labs, col, value)
 
                     # avoid "useless" splits
@@ -204,7 +214,7 @@ class DecisionTreeClassifier:
 @dataclass
 class Node:
     column: Optional[int]
-    value: Optional[int | float | str]
+    value: Optional[int | float | str | frozenset]
     results: Optional[dict[int | float | str, int]]
     true_branch: Optional[Node]
     false_branch: Optional[Node]
@@ -231,7 +241,10 @@ class Node:
             if _is_numeric(self.value):
                 print(f"{self.column}: <= {self.value}?")
             else:
-                print(f"{self.column}: {self.value}?")
+                if isinstance(self.value, (set, frozenset)):
+                    print(f"{self.column}: in {set(self.value)}?")
+                else:
+                    print(f"{self.column}: {self.value}?")
             # Print the branches
             print(f"{indent}T->", end="")
             self.true_branch.print_tree(indent + " ")
@@ -291,6 +304,8 @@ def _get_query_fn(column, value):
     if _is_numeric(value):
         return lambda prot: prot[column] <= value
     else:
+        if isinstance(value, (set, frozenset)):
+            return lambda prot: prot[column] in value 
         return lambda prot: prot[column] == value
 
 
@@ -300,6 +315,17 @@ def _unique_values(table, column_idx):
     for row in table:
         values.add(row[column_idx])
     return values
+
+def _all_nontrivial_subsets(values):
+    vals = list(values)
+    k = len(vals)
+    subsets = []
+
+    for r in range(1, (k // 2) + 1):
+        for comb in itertools.combinations(vals, r):
+            subsets.append(frozenset(comb))
+    
+    return subsets
 
 
 def _log2(x):
