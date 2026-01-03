@@ -1,10 +1,13 @@
 from __future__ import annotations
+
 import argparse
-from utils import read_sms, split_observations_and_labels
-from random import Random
-import re
 import math
+import re
 from collections import Counter
+from random import Random
+
+from utils import read_sms
+
 
 def tokenize_sms(message):
     """
@@ -50,7 +53,7 @@ class MultinomialNaiveBayesClassifier:
             )
 
         # Use assumed_probability as additive smoothing (Laplace smoothing)
-        # to avoid zero probabilities for unseen tokens
+        # To avoid zero probabilities for unseen tokens
         alpha = float(self.assumed_probability)
 
         # Vocabulary size
@@ -80,27 +83,26 @@ class MultinomialNaiveBayesClassifier:
 
         return self
 
-
     def predict(self, observations):
         predictions = []
 
         # For each tokenized message
         for tokens in observations:
-            token_counts = Counter(tokens)  # how many times each token appears in this message
+            token_counts = Counter(tokens)  # How many times each token appears in this message
 
             best_class = None
             best_score = -float("inf")
 
             # Compute a score for each class
             for c in self.classes_:
-                score = self.class_log_prior_[c]  # start with log P(c)
+                score = self.class_log_prior_[c]  # Start with log P(c)
 
                 # Add log-likelihoods for each token in the message
                 for t, k in token_counts.items():
                     if t in self.vocabulary_:
                         score += k * self.feature_log_prob_[c][t]
                     else:
-                        # unseen token -> use the smoothed unknown probability
+                        # Unseen token -> use the smoothed unknown probability
                         score += k * self.unknown_log_prob_[c]
 
                 # Keep the best scoring class
@@ -139,9 +141,10 @@ def main(args):
     # NOTE: consider args.test_ratio and args.seed
     n = len(tokenized_messages)
     indices = list(range(n))
-    #random number generator
+    # Random number generator
     rng.shuffle(indices)
 
+    # Split the dataset into training and test sets according to the specified test ratio
     test_size = int(n * args.test_ratio)
     test_indices = indices[:test_size]
     train_indices = indices[test_size:]
@@ -152,7 +155,9 @@ def main(args):
     test_labels = [labels[i] for i in test_indices]
 
     # Instantiate the Naive Bayes classifier
-    mnb = MultinomialNaiveBayesClassifier(assumed_probability=args.assumed_probability)
+    mnb = MultinomialNaiveBayesClassifier(
+        assumed_probability=args.assumed_probability
+        )
 
     # Train the classifier using the training data
     mnb.fit(train_messages, train_labels)
@@ -161,9 +166,11 @@ def main(args):
     predictions = mnb.predict(test_messages)
 
     # Evaluate predictions using accuracy and print the information
-    #Count correct predictions
-    correct = sum(1 for pred, expected in zip(predictions, test_labels) if pred == expected)
-    #Calc accuracy following the formula
+    # Count correct predictions
+    correct = sum(
+        1 for pred, expected in zip(predictions, test_labels) if pred == expected
+        )
+    # Calc accuracy following the formula
     accuracy = correct / len(test_labels) if len(test_labels) > 0 else 0.0
     print(f"Accuracy: {accuracy:.4f}")
 
