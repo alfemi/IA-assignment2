@@ -355,10 +355,15 @@ def main(args):
         else:
             train_X.append(obs)
             train_y.append(lab)
+    
+    if args.scoref == "gini":
+        scoref = gini
+    else:
+        scoref = entropy
 
     # Instantiate the decision tree classifier
     dec_tree = DecisionTreeClassifier(
-        scoref=args.scoref, beta=args.beta, prune_threshold=args.prune_threshold
+        scoref=scoref, beta=args.beta, prune_threshold=args.prune_threshold
     )
 
     # Train the decision tree using the training data
