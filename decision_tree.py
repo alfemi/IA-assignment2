@@ -113,7 +113,7 @@ class DecisionTreeClassifier:
                         best_split = (obs1, labs1, obs2, labs2)
 
             # if we don't find a better one -> leaf
-            if best_split is None:
+            if best_split is None or best_goodness < self.beta:
                 node.column = None
                 node.value = None
                 node.results = _unique_counts(labs)
