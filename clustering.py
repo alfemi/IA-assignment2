@@ -21,23 +21,51 @@ class KMeans:
         self.rng.shuffle(indices)
         self.centroids_ = [observations[i][:] for i in indices[: self.k]]
 
-        self.X_assignments_ = []
-        self.distances_ = []
+        max_iter = 100
+        prev_assignments = None
 
-        for x in observations:
-            best_centroid = None
-            best_distance = float("inf")
+        for _ in range(max_iter):
+            self.X_assignments_ = []
+            self.distances_ = []
 
-            for idx, c in enumerate(self.centroids_):
-                d = self._distance(x, c)
-                if d < best_distance:
-                    best_distance = d
-                    best_centroid = idx
+            for x in observations:
+                best_centroid = None
+                best_distance = float("inf")
 
-            self.X_assignments_.append(best_centroid)
-            self.distances_.append(best_distance)
+                for idx, c in enumerate(self.centroids_):
+                    d = self._distance(x, c)
+                    if d < best_distance:
+                        best_distance = d
+                        best_centroid = idx
+
+                self.X_assignments_.append(best_centroid)
+                self.distances_.append(best_distance)
+
+            if prev_assignments == self.X_assignments_:
+                break
+            prev_assignments = self.X_assignments_[:]
+
+            dim = len(observations[0])
+            new_centroids = [[0.0] * dim for _ in range(self.k)]
+            counts = [0] * self.k
+
+            for x, cluster_id in zip(observations, self.X_assignments_):
+                counts[cluster_id] += 1
+                for j in range(dim):
+                    new_centroids[cluster_id][j] += x[j]
+
+            for c in range(self.k):
+                if counts[c] == 0:
+                    # Empty cluster: reinitialize with a random point
+                    new_centroids[c] = observations[self.rng.randrange(n)][:] 
+                else:
+                    for j in range(dim):
+                        new_centroids[c][j] /= counts[c]
+
+            self.centroids_ = new_centroids
 
         return self
+
 
     
     def _squared_euclidean(self, a, b) -> float:
