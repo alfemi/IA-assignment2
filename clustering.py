@@ -11,8 +11,17 @@ class KMeans:
         self.rng = rng
 
     def fit(self, observations):
-        """YOUR CODE HERE"""
-        self.centroids_ = []
+        n = len(observations)
+        if n == 0:
+            raise ValueError("Empty dataset.")
+        if self.k > n:
+            raise ValueError("k cannot be greater than number of observations.")
+
+        indices = list(range(n))
+        self.rng.shuffle(indices)
+        self.centroids_ = [observations[i][:] for i in indices[: self.k]]
+
+        # Will be filled later
         self.distances_ = []
         self.X_assignments_ = []
         return self
