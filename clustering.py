@@ -115,7 +115,13 @@ def main(args):
     dataset = read_csv(args.dataset, ignore_first_column=True)
 
     # Instantiate KMeans
-    kmeans = KMeans(k=args.k, distance=args.distance, rng=rng)
+    kmeans = KMeans(
+        k=args.k,
+        distance=args.distance,
+        rng=rng,
+        n_restarts=args.n_restarts,
+    )
+
 
     # Train the clustering model
     kmeans.fit(dataset)
@@ -144,6 +150,13 @@ def parse_args():
         help="Distance metric used by KMeans.",
     )
     parser.add_argument("--seed", type=int, default=123456, help="RNG Seed.")
+    parser.add_argument(
+        "--n-restarts",
+        type=int,
+        default=10,
+        help="Number of random restarts for KMeans.",
+    )
+
     return parser.parse_args()
 
 
