@@ -5,6 +5,7 @@ from typing import Optional
 import argparse
 from utils import read_csv, split_observations_and_labels
 from random import Random
+import itertools
 
 
 def gini(labels) -> float:
@@ -27,6 +28,8 @@ def entropy(labels):
     for label, count in results.items():
         prob = count / total
         imp -= prob * _log2(prob)
+    
+    return imp
 
 
 class DecisionTreeClassifier:
@@ -56,19 +59,162 @@ class DecisionTreeClassifier:
         return correct / len(data)
 
     def _iterative_build_tree(self, observations, labels):
-        """YOUR CODE HERE"""
-        self.tree_ = None
-        raise NotImplementedError("TODO")
+        # create an empty root node to fill it afterwards
+        self.tree_ = Node(None, None, None, None, None)
+
+        # stack: every element is: node_to_fill, obs, labels
+        stack = [(self.tree_, observations, labels)]
+
+        while stack:
+            node, obs, labs = stack.pop()
+
+            # base case
+            if not obs or not labs:
+                # empty leaf
+                node.column = None
+                node.value = None
+                node.results = _unique_counts(labs)
+                node.true_branch = None
+                node.false_branch = None
+                continue
+            
+            root_imp = self.scoref(labs)
+            if root_imp == 0:
+                # pure node -> leaf
+                node.column = None
+                node.value = None
+                node.results = _unique_counts(labs)
+                node.true_branch = None
+                node.false_branch = None
+                continue
+            
+            best_col, best_val = None, None
+            best_goodness = 0.0
+            best_split = None # (obs1, labs1, obs2, labs2)
+
+            ncols = len(obs[0])
+
+            # try all available questions (col, value)
+            for col in range(ncols):
+                col_values = _unique_values(obs, col)
+
+                # numeric column: try thresholds
+                # categorical column: try all subsets
+                if col_values and all(_is_numeric(v) for v in col_values):
+                    candidate_values = col_values
+                else:
+                    candidate_values = _all_nontrivial_subsets(col_values)
+
+                for value in candidate_values:
+                    obs1, labs1, obs2, labs2 = _divideset(obs, labs, col, value)
+
+                    # avoid "useless" splits
+                    if len(obs1) == 0 or len(obs2) == 0:
+                        continue
+                    
+                    p1 = len(obs1) / len(obs)
+                    p2 = len(obs2) / len(obs)
+
+                    goodness = root_imp - p1 * self.scoref(labs1) - p2 * self.scoref(labs2)
+
+                    if goodness > best_goodness:
+                        best_goodness = goodness
+                        best_col, best_val = col, value
+                        best_split = (obs1, labs1, obs2, labs2)
+
+            # if we don't find a better one -> leaf
+            if best_split is None or best_goodness < self.beta:
+                node.column = None
+                node.value = None
+                node.results = _unique_counts(labs)
+                node.true_branch = None
+                node.false_branch = None
+                continue
+            
+            # if we find split
+            node.column = best_col
+            node.value = best_val
+            node.results = None
+
+            obs1, labs1, obs2, labs2 = best_split
+
+            node.true_branch = Node(None, None, None, None, None)
+            node.false_branch = Node(None, None, None, None, None)
+
+            # push child nodes in the stack to build them later
+            stack.append((node.true_branch, obs1, labs1))
+            stack.append((node.false_branch, obs2, labs2))
 
     def _prune_tree(self):
-        """YOUR CODE HERE"""
-        raise NotImplementedError("TODO")
+        # if threshold is <= 0, no pruning
+        if self.prune_threshold <= 0 or self.tree_ is None:
+            return
+        
+        def counts_to_labels(counts_dict):
+            labels = []
+            for lab, cnt in counts_dict.items():
+                labels.extend([lab] * cnt)
+            return labels
+        
+        # (node, visited)
+        stack = [(self.tree_, False)]
+
+        while stack:
+            node, visited = stack.pop()
+
+            if node is None or node.is_leaf():
+                continue
+            
+            if not visited:
+                # process children first, then the node
+                stack.append((node, True))
+                stack.append((node.true_branch, False))
+                stack.append((node.false_branch, False))
+                continue
+            
+            # going "up", if both children are leaves, try to prune
+            if node.true_branch is None or node.false_branch is None:
+                continue
+            
+            if node.true_branch.is_leaf() and node.false_branch.is_leaf():
+                left_counts = node.true_branch.results
+                right_counts = node.false_branch.results
+
+                left_labels = counts_to_labels(left_counts)
+                right_labels = counts_to_labels(right_counts)
+
+                n_left = len(left_labels)
+                n_right = len(right_labels)
+                n_total = n_left + n_right
+
+                if n_total == 0:
+                    continue
+                
+                # impurity if we merge
+                merged_labels = left_labels + right_labels
+                imp_merged = self.scoref(merged_labels)
+
+                # impurity if we keep the split
+                imp_children = (n_left / n_total) * self.scoref(left_labels) + (n_right / n_total) * self.scoref(right_labels)
+
+                # improvement of keeping the split vs merging
+                improvement = imp_merged - imp_children
+
+                # if the improvement is small, prune
+                if improvement < self.prune_threshold:
+                    node.column = None
+                    node.value = None
+                    node.results = _unique_counts(merged_labels)
+                    node.true_branch = None
+                    node.false_branch = None
+
+
 
 
 @dataclass
 class Node:
     column: Optional[int]
-    value: Optional[int | float | str]
+    value: Optional[int | float | str | frozenset]
     results: Optional[dict[int | float | str, int]]
     true_branch: Optional[Node]
     false_branch: Optional[Node]
@@ -95,7 +241,10 @@ class Node:
             if _is_numeric(self.value):
                 print(f"{self.column}: <= {self.value}?")
             else:
-                print(f"{self.column}: {self.value}?")
+                if isinstance(self.value, (set, frozenset)):
+                    print(f"{self.column}: in {set(self.value)}?")
+                else:
+                    print(f"{self.column}: {self.value}?")
             # Print the branches
             print(f"{indent}T->", end="")
             self.true_branch.print_tree(indent + " ")
@@ -155,6 +304,8 @@ def _get_query_fn(column, value):
     if _is_numeric(value):
         return lambda prot: prot[column] <= value
     else:
+        if isinstance(value, (set, frozenset)):
+            return lambda prot: prot[column] in value 
         return lambda prot: prot[column] == value
 
 
@@ -164,6 +315,17 @@ def _unique_values(table, column_idx):
     for row in table:
         values.add(row[column_idx])
     return values
+
+def _all_nontrivial_subsets(values):
+    vals = list(values)
+    k = len(vals)
+    subsets = []
+
+    for r in range(1, (k // 2) + 1):
+        for comb in itertools.combinations(vals, r):
+            subsets.append(frozenset(comb))
+    
+    return subsets
 
 
 def _log2(x):
@@ -200,30 +362,49 @@ def main(args):
     rng = Random(args.seed)
 
     # Load the dataset
-    dataset = read_csv(args.dataset)
+    dataset = read_csv(args.dataset, ignore_first=True)
     observations, labels = split_observations_and_labels(dataset)
 
     # Split the dataset into training and test sets
     # NOTE: consider args.test_ratio and args.seed
-    """YOUR CODE HERE"""
+    idxs = list(range(len(observations)))
+    rng.shuffle(idxs)
+
+    n_test = int(args.test_ratio * len(observations))
+    test_idxs = set(idxs[:n_test])
+
+    train_X, test_X, train_y, test_y = [], [], [], []
+    for i, (obs, lab) in enumerate(zip(observations, labels)):
+        if i in test_idxs:
+            test_X.append(obs)
+            test_y.append(lab)
+        else:
+            train_X.append(obs)
+            train_y.append(lab)
+    
+    if args.scoref == "gini":
+        scoref = gini
+    else:
+        scoref = entropy
 
     # Instantiate the decision tree classifier
     dec_tree = DecisionTreeClassifier(
-        scoref=args.scoref, beta=args.beta, prune_threshold=args.prune_threshold
+        scoref=scoref, beta=args.beta, prune_threshold=args.prune_threshold
     )
 
     # Train the decision tree using the training data
-    """YOUR CODE HERE"""
+    dec_tree.fit(train_X, train_y)
 
     # Print the tree structure
     print("Tree Structure:")
     dec_tree.tree_.print_tree()
 
     # Predict over the test set
-    """YOUR CODE HERE"""
+    predictions = dec_tree.predict(test_X)
 
     # Evaluate these predictions using the accuracy score and print the information
-    """YOUR CODE HERE"""
+    accuracy = dec_tree.score(test_X, test_y)
+    print("Accuracy: ", accuracy)
 
 
 def parse_args():
