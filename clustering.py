@@ -26,20 +26,21 @@ def main(args):
     # Set the random generator
     rng = Random(args.seed)
 
-    # Load the dataset
-    dataset = read_csv(args.dataset)
+    # Load the dataset (ignore first column if it's an identifier)
+    dataset = read_csv(args.dataset, ignore_first_column=True)
 
     # Instantiate KMeans
-    kmeans = KMeans(k=args.k, distance=args.distance, random_state=rng)
+    kmeans = KMeans(k=args.k, distance=args.distance, rng=rng)
 
     # Train the clustering model
-    """YOUR CODE HERE"""
+    kmeans.fit(dataset)
 
     # Print some metrics
-    print("Distances:", ...)
-    print("Sum of distances:", ...)
-    print("Centroid positions:", ...)
-    print("Centroids assignments:", ...)
+    print("Distances:", kmeans.distances_)
+    print("Sum of distances:", sum(kmeans.distances_))
+    print("Centroid positions:", kmeans.centroids_)
+    print("Centroids assignments:", kmeans.X_assignments_)
+
 
 
 def parse_args():
