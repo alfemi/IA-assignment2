@@ -17,65 +17,6 @@ class KMeans:
         self.rng = rng
         self.n_restarts = n_restarts
 
-
-    def fit(self, observations):
-        n = len(observations)
-        if n == 0:
-            raise ValueError("Empty dataset.")
-        if self.k > n:
-            raise ValueError("k cannot be greater than number of observations.")
-
-        indices = list(range(n))
-        self.rng.shuffle(indices)
-        self.centroids_ = [observations[i][:] for i in indices[: self.k]]
-
-        max_iter = 100
-        prev_assignments = None
-
-        for _ in range(max_iter):
-            self.X_assignments_ = []
-            self.distances_ = []
-
-            for x in observations:
-                best_centroid = None
-                best_distance = float("inf")
-
-                for idx, c in enumerate(self.centroids_):
-                    d = self._distance(x, c)
-                    if d < best_distance:
-                        best_distance = d
-                        best_centroid = idx
-
-                self.X_assignments_.append(best_centroid)
-                self.distances_.append(best_distance)
-
-            if prev_assignments == self.X_assignments_:
-                break
-            prev_assignments = self.X_assignments_[:]
-
-            dim = len(observations[0])
-            new_centroids = [[0.0] * dim for _ in range(self.k)]
-            counts = [0] * self.k
-
-            for x, cluster_id in zip(observations, self.X_assignments_):
-                counts[cluster_id] += 1
-                for j in range(dim):
-                    new_centroids[cluster_id][j] += x[j]
-
-            for c in range(self.k):
-                if counts[c] == 0:
-                    # Empty cluster: reinitialize with a random point
-                    new_centroids[c] = observations[self.rng.randrange(n)][:] 
-                else:
-                    for j in range(dim):
-                        new_centroids[c][j] /= counts[c]
-
-            self.centroids_ = new_centroids
-
-        return self
-
-
-    
     def _squared_euclidean(self, a, b) -> float:
         return sum((x - y) ** 2 for x, y in zip(a, b))
 
@@ -84,6 +25,82 @@ class KMeans:
         if self.distance == "squared-euclidean":
             return d2
         return math.sqrt(d2)
+
+    def fit(self, observations):
+        n = len(observations)
+        if n == 0:
+            raise ValueError("Empty dataset.")
+        if self.k > n:
+            raise ValueError("k cannot be greater than number of observations.")
+
+        best_total_distance = float("inf")
+        best_centroids = None
+        best_assignments = None
+        best_distances = None
+
+        max_iter = 100
+
+        for _ in range(self.n_restarts):
+            indices = list(range(n))
+            self.rng.shuffle(indices)
+            self.centroids_ = [observations[i][:] for i in indices[: self.k]]
+
+            prev_assignments = None
+
+            for _it in range(max_iter):
+                self.X_assignments_ = []
+                self.distances_ = []
+
+                for x in observations:
+                    best_centroid = None
+                    best_distance = float("inf")
+
+                    for idx, c in enumerate(self.centroids_):
+                        d = self._distance(x, c)
+                        if d < best_distance:
+                            best_distance = d
+                            best_centroid = idx
+
+                    self.X_assignments_.append(best_centroid)
+                    self.distances_.append(best_distance)
+
+                # Convergence check
+                if prev_assignments == self.X_assignments_:
+                    break
+                prev_assignments = self.X_assignments_[:]
+
+                dim = len(observations[0])
+                new_centroids = [[0.0] * dim for _ in range(self.k)]
+                counts = [0] * self.k
+
+                for x, cluster_id in zip(observations, self.X_assignments_):
+                    counts[cluster_id] += 1
+                    for j in range(dim):
+                        new_centroids[cluster_id][j] += x[j]
+
+                for c in range(self.k):
+                    if counts[c] == 0:
+                        # Empty cluster: reinitialize randomly
+                        new_centroids[c] = observations[self.rng.randrange(n)][:] 
+                    else:
+                        for j in range(dim):
+                            new_centroids[c][j] /= counts[c]
+
+                self.centroids_ = new_centroids
+
+            total_distance = sum(self.distances_)
+            if total_distance < best_total_distance:
+                best_total_distance = total_distance
+                best_centroids = [c[:] for c in self.centroids_]
+                best_assignments = self.X_assignments_[:]
+                best_distances = self.distances_[:]
+
+        # Keep the best solution
+        self.centroids_ = best_centroids
+        self.X_assignments_ = best_assignments
+        self.distances_ = best_distances
+
+        return self
 
 ###############################################
 #                 CLI Code                    #
