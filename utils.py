@@ -1,16 +1,24 @@
-def read_csv(file_name, ignore_first=False):
+def read_csv(file_name, ignore_first=False, ignore_first_column=False):
     table = []
     with open(file_name) as f:
         for i, line in enumerate(f):
             if i == 0 and ignore_first:
                 continue
             line = line.strip()
+            entries = line.split(",")
+
+            # Ignore first column if it's an identifier
+            if ignore_first_column:
+                entries = entries[1:]
+
             parsed = []
-            for entry in line.split(","):
+            for entry in entries:
                 entry = _cast_to(entry)
                 parsed.append(entry)
             table.append(parsed)
+
     return table
+
 
 
 
