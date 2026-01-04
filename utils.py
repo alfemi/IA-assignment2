@@ -1,4 +1,4 @@
-def read_csv(file_name, ignore_first=False, ignore_first_column=False):
+def read_csv(file_name, ignore_first=True, ignore_first_column=False):
     table = []
     with open(file_name) as f:
         for i, line in enumerate(f):
@@ -18,8 +18,6 @@ def read_csv(file_name, ignore_first=False, ignore_first_column=False):
             table.append(parsed)
 
     return table
-
-
 
 
 def split_observations_and_labels(table):
