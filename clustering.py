@@ -5,10 +5,18 @@ import math
 
 
 class KMeans:
-    def __init__(self, k: int = 4, distance: str = "euclidean", rng=Random(123456)):
+    def __init__(
+        self,
+        k: int = 4,
+        distance: str = "euclidean",
+        rng=Random(123456),
+        n_restarts: int = 10,
+    ):
         self.k = k
         self.distance = distance
         self.rng = rng
+        self.n_restarts = n_restarts
+
 
     def fit(self, observations):
         n = len(observations)
