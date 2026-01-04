@@ -231,6 +231,22 @@ class Node:
     def new_leaf(cls, labels):
         """Create a new instance of this class representing a leaf."""
         return cls(None, None, _unique_counts(labels), None, None)
+    
+    def count_nodes(self):
+        # return total number of nodes in the tree
+        if self is None:
+            return 0
+        if self.is_leaf():
+            return 1
+        return 1 + self.true_branch.count_nodes() + self.false_branch.count_nodes()
+    
+    def max_depth(self):
+        # return the maximum depth in the tree
+        if self is None:
+            return 0
+        if self.is_leaf():
+            return 1
+        return 1 + max(self.true_branch.max_depth(), self.false_branch.max_depth())
 
     def print_tree(self, indent=""):
         """Prints to stdout a representation of the tree."""
@@ -247,9 +263,9 @@ class Node:
                     print(f"{self.column}: {self.value}?")
             # Print the branches
             print(f"{indent}T->", end="")
-            self.true_branch.print_tree(indent + " ")
+            self.true_branch.print_tree(indent + "-")
             print(f"{indent}F->", end="")
-            self.false_branch.print_tree(indent + " ")
+            self.false_branch.print_tree(indent + "-")
 
     def follow_tree(self, observation):
         """
@@ -398,6 +414,12 @@ def main(args):
     # Print the tree structure
     print("Tree Structure:")
     dec_tree.tree_.print_tree()
+
+    # print the stats:
+    print("Tree stats:")
+    print("Depth:", dec_tree.tree_.max_depth())
+    print("Number of nodes:", dec_tree.tree_.count_nodes())
+
 
     # Predict over the test set
     predictions = dec_tree.predict(test_X)
