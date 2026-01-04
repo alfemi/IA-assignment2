@@ -1,6 +1,7 @@
 import argparse
 from random import Random
 from utils import read_csv
+import math
 
 
 class KMeans:
@@ -15,7 +16,15 @@ class KMeans:
         self.distances_ = []
         self.X_assignments_ = []
         return self
+    
+    def _squared_euclidean(self, a, b) -> float:
+        return sum((x - y) ** 2 for x, y in zip(a, b))
 
+    def _distance(self, a, b) -> float:
+        d2 = self._squared_euclidean(a, b)
+        if self.distance == "squared-euclidean":
+            return d2
+        return math.sqrt(d2)
 
 ###############################################
 #                 CLI Code                    #
