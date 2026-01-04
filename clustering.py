@@ -21,10 +21,24 @@ class KMeans:
         self.rng.shuffle(indices)
         self.centroids_ = [observations[i][:] for i in indices[: self.k]]
 
-        # Will be filled later
-        self.distances_ = []
         self.X_assignments_ = []
+        self.distances_ = []
+
+        for x in observations:
+            best_centroid = None
+            best_distance = float("inf")
+
+            for idx, c in enumerate(self.centroids_):
+                d = self._distance(x, c)
+                if d < best_distance:
+                    best_distance = d
+                    best_centroid = idx
+
+            self.X_assignments_.append(best_centroid)
+            self.distances_.append(best_distance)
+
         return self
+
     
     def _squared_euclidean(self, a, b) -> float:
         return sum((x - y) ** 2 for x, y in zip(a, b))
