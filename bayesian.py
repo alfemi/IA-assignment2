@@ -10,12 +10,6 @@ from utils import read_sms
 
 
 def tokenize_sms(message):
-    """
-    Convierte un mensaje SMS en una lista de tokens:
-    - pasa a minúsculas
-    - elimina puntuación
-    - separa en palabras alfanuméricas
-    """
     message = message.lower()
     tokens = re.findall(r"[a-z0-9']+", message)
     return tokens

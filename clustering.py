@@ -112,7 +112,7 @@ def main(args):
     rng = Random(args.seed)
 
     # Load the dataset (ignore first column if it's an identifier)
-    dataset = read_csv(args.dataset, ignore_first_column=True)
+    dataset = read_csv(args.dataset, ignore_first=True, ignore_first_column=True)
 
     # Instantiate KMeans
     kmeans = KMeans(

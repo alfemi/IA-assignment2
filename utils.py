@@ -1,15 +1,18 @@
-def read_csv(file_name, ignore_first=False):
+def read_csv(file_name, ignore_first=False, ignore_first_column=False):
     table = []
     with open(file_name) as f:
         for i, line in enumerate(f):
             if i == 0 and ignore_first:
                 continue
-            line = line.strip()
-            parsed = []
-            for entry in line.split(","):
-                entry = _cast_to(entry)
-                parsed.append(entry)
-            table.append(parsed)
+
+            row = line.strip().split(",")
+
+            if ignore_first_column:
+                row = row[1:]
+
+            row = [_cast_to(x) for x in row]
+            table.append(row)
+
     return table
 
 
