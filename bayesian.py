@@ -178,7 +178,7 @@ def parse_args():
     )
     parser.add_argument(
         "--assumed_probability",
-        type=int,
+        type=float,
         default=1,
         help="Value for the 'assumed_probability' parameter.",
     )
